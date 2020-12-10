@@ -1,0 +1,58 @@
+version: "2.21"
+services:
+  # Base de données MySQL
+  mysql:
+    image: mariadb
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: bingo
+      MYSQL_DATABASE: guacamole
+      MYSQL_USER: guacamole
+      MYSQL_PASSWORD: bingo
+    networks:
+      - backend
+    volumes:
+      - ./initdb.sql:/docker-entrypoint-initdb.d/initdb.sql 
+  
+  # Guacd
+  guacd:
+    restart: unless-stopped
+    image: guacamole/guacd
+    networks:
+      - backend
+  
+  # Guacamole
+  guacamole:
+    depends_on:
+      - guacd
+      - mysql
+    image: guacamole/guacamole
+    restart: unless-stopped
+    environment:
+      MYSQL_HOSTNAME: mysql
+      GUACD_HOSTNAME: guacd
+      MYSQL_DATABASE: guacamole
+      MYSQL_USER: guacamole
+      MYSQL_PASSWORD: bingo
+    networks:
+      - backend
+      - frontend
+  
+  # Reverse proxy nginx
+  proxy:
+    build: ./nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    #volumes:
+    # - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - frontend
+
+# Déclaration des deux réseaux utilisés
+networks:
+  frontend:
+    driver: bridge
+  backend: 
+    driver: bridge
